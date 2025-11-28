@@ -10,12 +10,15 @@ Part 1: For each pair of antennas with the same frequency, there are two antinod
 one on either side of them. Count the unique locations within the bounds of the map
 that contain an antinode.
 
-Part 2: (To be revealed after Part 1 is solved)
+Part 2: With resonant harmonics, an antinode occurs at any grid position exactly
+in line with at least two antennas of the same frequency, regardless of distance.
+This includes antenna positions themselves.
 """
 
 from pathlib import Path
 from collections import defaultdict
 from itertools import combinations
+from math import gcd
 
 
 def parse_map(puzzle_input: Path) -> tuple[list[str], int, int]:
@@ -68,11 +71,63 @@ def find_antinodes(antennas: dict[str, list[tuple[int, int]]],
     return antinodes
 
 
+def find_antinodes_with_harmonics(antennas: dict[str, list[tuple[int, int]]],
+                                   rows: int, cols: int) -> set[tuple[int, int]]:
+    """Find all antinode locations considering resonant harmonics.
+
+    An antinode occurs at any position in line with at least two antennas
+    of the same frequency, regardless of distance.
+    """
+    antinodes = set()
+
+    # For each frequency
+    for frequency, positions in antennas.items():
+        # Need at least 2 antennas to create antinodes
+        if len(positions) < 2:
+            continue
+
+        # Check all pairs of antennas with the same frequency
+        for (r1, c1), (r2, c2) in combinations(positions, 2):
+            # Calculate the direction vector
+            dr = r2 - r1
+            dc = c2 - c1
+
+            # Reduce to simplest form using GCD
+            g = gcd(abs(dr), abs(dc))
+            dr //= g
+            dc //= g
+
+            # Walk along the line in both directions
+            # Start from first antenna and go backwards
+            r, c = r1, c1
+            while 0 <= r < rows and 0 <= c < cols:
+                antinodes.add((r, c))
+                r -= dr
+                c -= dc
+
+            # Start from first antenna and go forwards
+            r, c = r1 + dr, c1 + dc
+            while 0 <= r < rows and 0 <= c < cols:
+                antinodes.add((r, c))
+                r += dr
+                c += dc
+
+    return antinodes
+
+
 def solve_part1(puzzle_input: Path) -> int:
     """Count unique antinode locations within the map bounds."""
     grid, rows, cols = parse_map(puzzle_input)
     antennas = find_antennas(grid)
     antinodes = find_antinodes(antennas, rows, cols)
+    return len(antinodes)
+
+
+def solve_part2(puzzle_input: Path) -> int:
+    """Count unique antinode locations with resonant harmonics."""
+    grid, rows, cols = parse_map(puzzle_input)
+    antennas = find_antennas(grid)
+    antinodes = find_antinodes_with_harmonics(antennas, rows, cols)
     return len(antinodes)
 
 
@@ -82,3 +137,7 @@ if __name__ == "__main__":
     # Part 1
     part1_answer = solve_part1(puzzle_input)
     print(f"Part 1: {part1_answer}")
+
+    # Part 2
+    part2_answer = solve_part2(puzzle_input)
+    print(f"Part 2: {part2_answer}")
